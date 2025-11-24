@@ -1,4 +1,4 @@
-# Tool_MR400Pro_UR_Tracer
+# Tool_MR400Pro_UR_Tracing
 
 Streamlit application for mapping **MR400 Pro legacy requirements** to **canonical user needs** using a **hybrid scoring pipeline** combining:
 - **Semantic similarity** (Azure OpenAI `text-embedding-3-large` or SBERT fallback)
@@ -40,8 +40,8 @@ Tailored to the specs in `Prompt_UR_Tracing_Tool.md` and aligned with the **MRPC
 
 ```bash
 # Clone and set up environment
-git clone https://github.com/<your-org>/Tool_MR400Pro_UR_Tracer.git
-cd Tool_MR400Pro_UR_Tracer
+git clone https://github.com/scottdstearns/Tool_MR400Pro_UR_Tracing.git
+cd Tool_MR400Pro_UR_Tracing
 python3.11 -m venv .venv
 source .venv/bin/activate
 pip install --upgrade pip
@@ -111,7 +111,7 @@ Access at: http://161.88.75.204:8503
 ## Project Layout
 
 ```
-Tool_MR400Pro_UR_Tracer/
+Tool_MR400Pro_UR_Tracing/
 ├── app.py                     # Streamlit UI
 ├── matching.py                # Hybrid matching engine
 ├── domain_lexicon.json        # Domain keyword groups

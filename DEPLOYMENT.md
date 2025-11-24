@@ -1,6 +1,6 @@
-# Deployment Guide — MR400 Pro UR Tracer
+# Deployment Guide — MR400 Pro UR Tracing
 
-This guide covers deploying the **Tool_MR400Pro_UR_Tracer** on the MRPC AI Platform (AWS EC2, Docker, LiteLLM proxy).
+This guide covers deploying the **Tool_MR400Pro_UR_Tracing** on the MRPC AI Platform (AWS EC2, Docker, LiteLLM proxy).
 
 ---
 
@@ -17,8 +17,8 @@ This guide covers deploying the **Tool_MR400Pro_UR_Tracer** on the MRPC AI Platf
 
 ```bash
 # Clone repo
-git clone https://github.com/<your-org>/Tool_MR400Pro_UR_Tracer.git
-cd Tool_MR400Pro_UR_Tracer
+git clone https://github.com/scottdstearns/Tool_MR400Pro_UR_Tracing.git
+cd Tool_MR400Pro_UR_Tracing
 
 # Set up virtual environment
 python3.11 -m venv .venv
@@ -52,8 +52,8 @@ Clone the repo into `/data/`:
 
 ```bash
 cd /data
-git clone https://github.com/<your-org>/Tool_MR400Pro_UR_Tracer.git
-cd Tool_MR400Pro_UR_Tracer
+git clone https://github.com/scottdstearns/Tool_MR400Pro_UR_Tracing.git
+cd Tool_MR400Pro_UR_Tracing
 ```
 
 ### 2. Configure `.env`
@@ -168,7 +168,7 @@ docker logs --tail=100 -f mr400pro-tracer
 ### Update Deployment
 
 ```bash
-cd /data/Tool_MR400Pro_UR_Tracer
+cd /data/Tool_MR400Pro_UR_Tracing
 git pull origin main
 docker compose up -d --build
 ```
