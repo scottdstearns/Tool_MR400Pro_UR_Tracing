@@ -1,0 +1,16 @@
+streamlit==1.39.0
+pandas==2.2.3
+openpyxl==3.1.5
+numpy==1.26.4
+scikit-learn==1.5.2
+scipy==1.14.1
+sentence-transformers==3.2.1
+spacy==3.7.5
+thinc==8.2.5
+python-dotenv==1.0.1
+openai==1.54.1
+azure-identity==1.17.1
+requests==2.32.3
+beautifulsoup4==4.12.3
+protobuf==5.28.2
+rich==13.9.2

@@ -1,0 +1,37 @@
+version: '3.8'
+
+services:
+  mr400pro-tracer:
+    build: .
+    container_name: mr400pro-tracer
+    ports:
+      - "8503:8501"
+    environment:
+      # Azure OpenAI
+      AZURE_OPENAI_API_KEY: ${AZURE_OPENAI_API_KEY}
+      AZURE_OPENAI_ENDPOINT: ${AZURE_OPENAI_ENDPOINT}
+      AZURE_OPENAI_API_VERSION: ${AZURE_OPENAI_API_VERSION:-2024-02-01}
+      AZURE_OPENAI_EMBEDDING_DEPLOYMENT: ${AZURE_OPENAI_EMBEDDING_DEPLOYMENT:-text-embedding-3-large}
+      AZURE_OPENAI_EMBEDDING_MODEL: ${AZURE_OPENAI_EMBEDDING_MODEL:-text-embedding-3-large}
+      
+      # SBERT fallback
+      SBERT_MODEL_NAME: ${SBERT_MODEL_NAME:-sentence-transformers/all-MiniLM-L6-v2}
+      
+      # Networking (corporate proxy if needed)
+      HTTP_PROXY: ${HTTP_PROXY:-}
+      HTTPS_PROXY: ${HTTPS_PROXY:-}
+      NO_PROXY: ${NO_PROXY:-localhost,127.0.0.1,::1}
+      
+      # Streamlit config
+      STREAMLIT_BROWSER_GATHER_USAGE_STATS: "false"
+      STREAMLIT_SERVER_MAX_UPLOAD_SIZE: 200
+    volumes:
+      - ./samples:/app/samples:ro
+    restart: unless-stopped
+    networks:
+      - mrpc-ai-network
+
+networks:
+  mrpc-ai-network:
+    external: true
+

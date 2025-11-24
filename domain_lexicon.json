@@ -1,0 +1,14 @@
+{
+  "ALM": ["alarm", "visual indicator", "audible alarm", "alarm silence", "IEC 60601-1-8"],
+  "ECG": ["electrocardiogram", "ecg", "qrs", "electrode", "lead", "arrhythmia"],
+  "SPO2": ["spo2", "oxygen saturation", "desaturation", "perfusion", "pleth"],
+  "NIBP": ["nibp", "nbp", "non-invasive blood pressure", "cuff", "oscillometric"],
+  "IBP": ["ibp", "invasive blood pressure", "arterial", "pressure transducer"],
+  "CO2": ["co2", "capnography", "etco2", "fico2", "apnea", "respiration"],
+  "TEMP": ["temperature", "celsius", "fahrenheit", "probe", "thermistor"],
+  "AGENT": ["anesthetic", "mac", "n2o", "fio2", "halothane", "isoflurane", "sevoflurane", "desflurane", "enflurane"],
+  "MRI": ["mri", "magnet", "gauss", "zone 3", "zone 4", "conditional", "bore"],
+  "PWR": ["battery", "ac power", "charger", "power button", "supply"],
+  "CONN": ["wireless", "communication", "pairing", "network", "pic ix", "module", "remote monitor"],
+  "SRV": ["service", "maintenance", "fru", "diagnostics", "logs", "update", "firmware", "software", "warranty"]
+}
