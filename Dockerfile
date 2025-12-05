@@ -17,6 +17,7 @@ RUN pip install --no-cache-dir --upgrade pip && \
 COPY app.py .
 COPY matching.py .
 COPY domain_lexicon.json .
+COPY VERSION .
 COPY .env.example .env
 
 # Expose Streamlit port

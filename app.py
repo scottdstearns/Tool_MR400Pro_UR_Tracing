@@ -106,13 +106,24 @@ score_threshold = st.sidebar.slider(
 
 # ========== COMPUTE MATCHES ==========
 if st.button("🚀 Compute Matches", type="primary", use_container_width=True):
+    # Validate column selections first
+    if child_id_col == child_text_col:
+        st.error("❌ Child ID and Child Text cannot be the same column")
+        st.stop()
+    if parent_id_col == parent_text_col:
+        st.error("❌ Parent ID and Parent Text cannot be the same column")
+        st.stop()
+    
     # Rename columns for matching
     work_child = child_df.copy()
     work_child = work_child.rename(columns={child_id_col: "Child_ID", child_text_col: "Child_Text"})
     
     # Ensure required columns exist in child
     if "Child_ID" not in work_child.columns or "Child_Text" not in work_child.columns:
-        st.error("❌ Child dataframe missing required columns after mapping")
+        st.error(f"❌ Child dataframe missing required columns after mapping")
+        st.error(f"Expected: Child_ID, Child_Text")
+        st.error(f"Got: {list(work_child.columns)}")
+        st.error(f"Mapping: {child_id_col} → Child_ID, {child_text_col} → Child_Text")
         st.stop()
     
     work_parent = parent_df.copy()
@@ -125,7 +136,10 @@ if st.button("🚀 Compute Matches", type="primary", use_container_width=True):
     
     # Ensure required columns exist in parent
     if "Parent_ID" not in work_parent.columns or "Parent_Text" not in work_parent.columns:
-        st.error("❌ Parent dataframe missing required columns after mapping")
+        st.error(f"❌ Parent dataframe missing required columns after mapping")
+        st.error(f"Expected: Parent_ID, Parent_Text")
+        st.error(f"Got: {list(work_parent.columns)}")
+        st.error(f"Mapping: {parent_id_col} → Parent_ID, {parent_text_col} → Parent_Text")
         st.stop()
 
     config = MatchingConfig(
