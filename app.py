@@ -66,17 +66,12 @@ child_id_col = st.sidebar.selectbox("Child ID column", child_df.columns, key="ch
 child_text_col = st.sidebar.selectbox("Child Text column", child_df.columns, key="child_text")
 parent_id_col = st.sidebar.selectbox("Parent ID column", parent_df.columns, key="parent_id")
 parent_text_col = st.sidebar.selectbox("Parent Text column", parent_df.columns, key="parent_text")
-parent_title_col = st.sidebar.selectbox(
-    "Parent Title column (optional)",
-    parent_df.columns,
-    index=min(1, len(parent_df.columns) - 1),
-    key="parent_title"
-)
 
 # Optional extra columns
 st.sidebar.subheader("➕ Extra Columns (Optional)")
+st.sidebar.caption("Select additional columns to include in output (e.g., short descriptions, status, etc.)")
 child_extra_options = [c for c in child_df.columns if c not in (child_id_col, child_text_col)]
-parent_extra_options = [c for c in parent_df.columns if c not in (parent_id_col, parent_text_col, parent_title_col)]
+parent_extra_options = [c for c in parent_df.columns if c not in (parent_id_col, parent_text_col)]
 
 extra_child_cols = st.sidebar.multiselect("Child extra columns", child_extra_options, key="child_extra")
 extra_parent_cols = st.sidebar.multiselect("Parent extra columns", parent_extra_options, key="parent_extra")
@@ -117,7 +112,6 @@ if st.button("🚀 Compute Matches", type="primary", use_container_width=True):
         columns={
             parent_id_col: "Parent_ID",
             parent_text_col: "Parent_Text",
-            parent_title_col: "Parent_Title",
         }
     )
     
@@ -125,10 +119,6 @@ if st.button("🚀 Compute Matches", type="primary", use_container_width=True):
     if "Parent_ID" not in work_parent.columns or "Parent_Text" not in work_parent.columns:
         st.error("❌ Parent dataframe missing required columns after mapping")
         st.stop()
-    
-    # Add Parent_Title if it doesn't exist (fallback to Parent_Text)
-    if "Parent_Title" not in work_parent.columns:
-        work_parent["Parent_Title"] = work_parent["Parent_Text"]
 
     config = MatchingConfig(
         top_k=top_k,
