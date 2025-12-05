@@ -104,14 +104,31 @@ score_threshold = st.sidebar.slider(
 # ========== COMPUTE MATCHES ==========
 if st.button("🚀 Compute Matches", type="primary", use_container_width=True):
     # Rename columns for matching
-    work_child = child_df.rename(columns={child_id_col: "Child_ID", child_text_col: "Child_Text"})
-    work_parent = parent_df.rename(
+    work_child = child_df.copy()
+    work_child = work_child.rename(columns={child_id_col: "Child_ID", child_text_col: "Child_Text"})
+    
+    # Ensure required columns exist in child
+    if "Child_ID" not in work_child.columns or "Child_Text" not in work_child.columns:
+        st.error("❌ Child dataframe missing required columns after mapping")
+        st.stop()
+    
+    work_parent = parent_df.copy()
+    work_parent = work_parent.rename(
         columns={
             parent_id_col: "Parent_ID",
             parent_text_col: "Parent_Text",
             parent_title_col: "Parent_Title",
         }
     )
+    
+    # Ensure required columns exist in parent
+    if "Parent_ID" not in work_parent.columns or "Parent_Text" not in work_parent.columns:
+        st.error("❌ Parent dataframe missing required columns after mapping")
+        st.stop()
+    
+    # Add Parent_Title if it doesn't exist (fallback to Parent_Text)
+    if "Parent_Title" not in work_parent.columns:
+        work_parent["Parent_Title"] = work_parent["Parent_Text"]
 
     config = MatchingConfig(
         top_k=top_k,
@@ -133,6 +150,11 @@ if st.button("🚀 Compute Matches", type="primary", use_container_width=True):
         fallback_model_name=os.getenv("SBERT_MODEL_NAME", config.sbert_model_name),
     )
 
+    # Debug: show what columns we have after renaming
+    with st.expander("🔍 Debug: Column Mapping", expanded=False):
+        st.write("**Child columns after mapping:**", list(work_child.columns))
+        st.write("**Parent columns after mapping:**", list(work_parent.columns))
+    
     with st.spinner("🔄 Running hybrid matching (embeddings + TF-IDF + rules)..."):
         try:
             results = rank_top_k(
@@ -144,7 +166,10 @@ if st.button("🚀 Compute Matches", type="primary", use_container_width=True):
                 extra_parent_cols=extra_parent_cols,
             )
         except Exception as e:
+            import traceback
             st.error(f"❌ Matching failed: {e}")
+            with st.expander("Full error trace"):
+                st.code(traceback.format_exc())
             st.stop()
 
     # Validation
