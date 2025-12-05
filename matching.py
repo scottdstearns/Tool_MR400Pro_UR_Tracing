@@ -12,6 +12,7 @@ import numpy as np
 import pandas as pd
 from dotenv import load_dotenv
 from openai import AzureOpenAI, OpenAI
+import httpx
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 
@@ -84,17 +85,15 @@ class EmbeddingProvider:
     def embed(self, texts: Sequence[str], method: Literal["azure", "sbert"] = "azure") -> np.ndarray:
         if method == "azure" and self.azure_config:
             import sys
-            print(f"🔧 DEBUG: matching.py version check - proxy fix v2 loaded", file=sys.stderr)
+            print(f"🔧 DEBUG: matching.py version v3 - httpx client approach", file=sys.stderr)
             
-            # Temporarily clear proxy env vars to avoid openai SDK conflicts
-            old_http_proxy = os.environ.pop("HTTP_PROXY", None)
-            old_https_proxy = os.environ.pop("HTTPS_PROXY", None)
-            old_http_proxy_lower = os.environ.pop("http_proxy", None)
-            old_https_proxy_lower = os.environ.pop("https_proxy", None)
-            
-            print(f"🔧 DEBUG: Cleared proxies - HTTP_PROXY was: {old_http_proxy}", file=sys.stderr)
-            print(f"🔧 DEBUG: Cleared proxies - HTTPS_PROXY was: {old_https_proxy}", file=sys.stderr)
-            print(f"🔧 DEBUG: Current env after clear - HTTP_PROXY: {os.environ.get('HTTP_PROXY', 'NOT SET')}", file=sys.stderr)
+            # Create httpx client with NO proxy (direct connection to Azure)
+            http_client = httpx.Client(
+                timeout=60.0,
+                transport=httpx.HTTPTransport(retries=3),
+                # Explicitly set proxies to None to bypass environment proxy vars
+                proxies=None,
+            )
             
             try:
                 client: OpenAI
@@ -103,32 +102,27 @@ class EmbeddingProvider:
                     client = OpenAI(
                         base_url=self.proxy_base_url,
                         api_key=self.proxy_api_key,
+                        http_client=http_client,
                     )
                 else:
-                    print(f"🔧 DEBUG: Using direct Azure OpenAI path", file=sys.stderr)
+                    print(f"🔧 DEBUG: Using direct Azure OpenAI - no proxy", file=sys.stderr)
                     print(f"🔧 DEBUG: Azure endpoint: {self.azure_config.endpoint}", file=sys.stderr)
                     client = AzureOpenAI(
                         api_key=self.azure_config.api_key,
                         azure_endpoint=self.azure_config.endpoint,
                         api_version=self.azure_config.api_version,
+                        http_client=http_client,
                     )
 
+                print(f"🔧 DEBUG: Client created, calling embeddings API...", file=sys.stderr)
                 resp = client.embeddings.create(
                     model=self.azure_config.deployment_name,
                     input=list(texts),
                 )
+                print(f"🔧 DEBUG: Got {len(resp.data)} embeddings successfully", file=sys.stderr)
                 return np.array([item.embedding for item in resp.data], dtype=np.float32)
             finally:
-                # Restore proxy env vars
-                if old_http_proxy:
-                    os.environ["HTTP_PROXY"] = old_http_proxy
-                if old_https_proxy:
-                    os.environ["HTTPS_PROXY"] = old_https_proxy
-                if old_http_proxy_lower:
-                    os.environ["http_proxy"] = old_http_proxy_lower
-                if old_https_proxy_lower:
-                    os.environ["https_proxy"] = old_https_proxy_lower
-                print(f"🔧 DEBUG: Restored proxy env vars", file=sys.stderr)
+                http_client.close()
 
         model = self._ensure_sbert()
         return model.encode(list(texts), convert_to_numpy=True)
