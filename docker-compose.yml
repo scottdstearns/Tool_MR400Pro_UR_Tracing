@@ -2,7 +2,12 @@ version: '3.8'
 
 services:
   mr400pro-tracer:
-    build: .
+    build:
+      context: .
+      args:
+        HTTP_PROXY: ${HTTP_PROXY}
+        HTTPS_PROXY: ${HTTPS_PROXY}
+        NO_PROXY: ${NO_PROXY}
     container_name: mr400pro-tracer
     ports:
       - "8503:8501"
