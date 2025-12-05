@@ -109,15 +109,21 @@ class EmbeddingProvider:
                 print(f"🔧 DEBUG: httpx client created successfully with proxy support", file=sys.stderr)
                 
                 client: OpenAI
+                model_to_use = None
+                
                 if self.use_litellm_proxy and self.proxy_base_url and self.proxy_api_key:
                     print(f"🔧 DEBUG: Using LiteLLM proxy path", file=sys.stderr)
+                    print(f"🔧 DEBUG: LiteLLM URL: {self.proxy_base_url}", file=sys.stderr)
                     client = OpenAI(
                         base_url=self.proxy_base_url,
                         api_key=self.proxy_api_key,
                         http_client=http_client,
                     )
+                    # LiteLLM mode: use EMBEDDING_MODEL from env (e.g., "azure-embedding-large")
+                    model_to_use = os.getenv("EMBEDDING_MODEL", "azure-embedding-large")
+                    print(f"🔧 DEBUG: Using LiteLLM model: {model_to_use}", file=sys.stderr)
                 else:
-                    print(f"🔧 DEBUG: Using direct Azure OpenAI - no proxy", file=sys.stderr)
+                    print(f"🔧 DEBUG: Using direct Azure OpenAI", file=sys.stderr)
                     print(f"🔧 DEBUG: Azure endpoint: {self.azure_config.endpoint}", file=sys.stderr)
                     client = AzureOpenAI(
                         api_key=self.azure_config.api_key,
@@ -125,10 +131,12 @@ class EmbeddingProvider:
                         api_version=self.azure_config.api_version,
                         http_client=http_client,
                     )
+                    model_to_use = self.azure_config.deployment_name
+                    print(f"🔧 DEBUG: Using Azure deployment: {model_to_use}", file=sys.stderr)
 
                 print(f"🔧 DEBUG: Client created, calling embeddings API...", file=sys.stderr)
                 resp = client.embeddings.create(
-                    model=self.azure_config.deployment_name,
+                    model=model_to_use,
                     input=list(texts),
                 )
                 print(f"🔧 DEBUG: Got {len(resp.data)} embeddings successfully", file=sys.stderr)

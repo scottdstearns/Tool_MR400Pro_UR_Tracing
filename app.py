@@ -149,18 +149,32 @@ if st.button("🚀 Compute Matches", type="primary", use_container_width=True):
         rules_enabled=rules_enabled,
     )
 
-    azure_config = AzureEmbeddingConfig(
-        api_key=os.getenv("AZURE_OPENAI_API_KEY", ""),
-        endpoint=os.getenv("AZURE_OPENAI_ENDPOINT", ""),
-        api_version=os.getenv("AZURE_OPENAI_API_VERSION", "2024-02-01"),
-        deployment_name=os.getenv("AZURE_OPENAI_EMBEDDING_DEPLOYMENT", "text-embedding-3-large"),
-        model_name=os.getenv("AZURE_OPENAI_EMBEDDING_MODEL", "text-embedding-3-large"),
-    )
-
-    emb_provider = EmbeddingProvider(
-        azure_config=azure_config,
-        fallback_model_name=os.getenv("SBERT_MODEL_NAME", config.sbert_model_name),
-    )
+    # Check if using LiteLLM proxy or direct Azure OpenAI
+    use_litellm = bool(os.getenv("OPENAI_BASE_URL"))
+    
+    if use_litellm:
+        st.info("ℹ️ Using LiteLLM proxy for embeddings")
+        azure_config = None
+        emb_provider = EmbeddingProvider(
+            azure_config=None,
+            fallback_model_name=os.getenv("SBERT_MODEL_NAME", config.sbert_model_name),
+            use_litellm_proxy=True,
+            proxy_base_url=os.getenv("OPENAI_BASE_URL"),
+            proxy_api_key=os.getenv("OPENAI_API_KEY", "sk-1234"),
+        )
+    else:
+        st.info("ℹ️ Using direct Azure OpenAI for embeddings")
+        azure_config = AzureEmbeddingConfig(
+            api_key=os.getenv("AZURE_OPENAI_API_KEY", ""),
+            endpoint=os.getenv("AZURE_OPENAI_ENDPOINT", ""),
+            api_version=os.getenv("AZURE_OPENAI_API_VERSION", "2024-02-01"),
+            deployment_name=os.getenv("AZURE_OPENAI_EMBEDDING_DEPLOYMENT", "text-embedding-3-large"),
+            model_name=os.getenv("AZURE_OPENAI_EMBEDDING_MODEL", "text-embedding-3-large"),
+        )
+        emb_provider = EmbeddingProvider(
+            azure_config=azure_config,
+            fallback_model_name=os.getenv("SBERT_MODEL_NAME", config.sbert_model_name),
+        )
 
     # Debug: show what columns we have after renaming
     with st.expander("🔍 Debug: Column Mapping", expanded=False):

@@ -1,0 +1,14 @@
+.venv/
+__pycache__/
+*.pyc
+.git/
+.gitignore
+.env
+*.md
+samples/
+docs/
+rebuild.sh
+docker-compose.yml
+.DS_Store
+Tool_RequirementsTracing/
+
