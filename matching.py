@@ -83,7 +83,8 @@ class EmbeddingProvider:
         return self._sbert
 
     def embed(self, texts: Sequence[str], method: Literal["azure", "sbert"] = "azure") -> np.ndarray:
-        if method == "azure" and self.azure_config:
+        # Use Azure/LiteLLM path if either azure_config exists OR using litellm proxy
+        if method == "azure" and (self.azure_config or self.use_litellm_proxy):
             import sys
             print(f"🔧 DEBUG: matching.py version v5 - explicit proxy config", file=sys.stderr)
             
@@ -122,7 +123,7 @@ class EmbeddingProvider:
                     # LiteLLM mode: use EMBEDDING_MODEL from env (e.g., "azure-embedding-large")
                     model_to_use = os.getenv("EMBEDDING_MODEL", "azure-embedding-large")
                     print(f"🔧 DEBUG: Using LiteLLM model: {model_to_use}", file=sys.stderr)
-                else:
+                elif self.azure_config:
                     print(f"🔧 DEBUG: Using direct Azure OpenAI", file=sys.stderr)
                     print(f"🔧 DEBUG: Azure endpoint: {self.azure_config.endpoint}", file=sys.stderr)
                     client = AzureOpenAI(
@@ -133,6 +134,11 @@ class EmbeddingProvider:
                     )
                     model_to_use = self.azure_config.deployment_name
                     print(f"🔧 DEBUG: Using Azure deployment: {model_to_use}", file=sys.stderr)
+                else:
+                    raise RuntimeError(
+                        "Neither LiteLLM proxy nor Azure OpenAI config provided. "
+                        "Set OPENAI_BASE_URL for LiteLLM or AZURE_OPENAI_* for direct Azure."
+                    )
 
                 print(f"🔧 DEBUG: Client created, calling embeddings API...", file=sys.stderr)
                 resp = client.embeddings.create(
