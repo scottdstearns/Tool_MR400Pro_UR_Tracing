@@ -85,24 +85,28 @@ class EmbeddingProvider:
     def embed(self, texts: Sequence[str], method: Literal["azure", "sbert"] = "azure") -> np.ndarray:
         if method == "azure" and self.azure_config:
             import sys
-            print(f"🔧 DEBUG: matching.py version v4 - clear env then httpx", file=sys.stderr)
+            print(f"🔧 DEBUG: matching.py version v5 - explicit proxy config", file=sys.stderr)
             
-            # Clear proxy env vars BEFORE creating httpx client
-            old_http_proxy = os.environ.pop("HTTP_PROXY", None)
-            old_https_proxy = os.environ.pop("HTTPS_PROXY", None)
-            old_http_proxy_lower = os.environ.pop("http_proxy", None)
-            old_https_proxy_lower = os.environ.pop("https_proxy", None)
-            
-            print(f"🔧 DEBUG: Cleared proxy env vars before httpx client creation", file=sys.stderr)
+            # Save proxy settings to configure explicitly
+            proxy_url = os.environ.get("HTTP_PROXY") or os.environ.get("http_proxy")
+            print(f"🔧 DEBUG: Using proxy: {proxy_url if proxy_url else 'None (direct connection)'}", file=sys.stderr)
             
             http_client = None
             try:
-                # Create httpx client with NO proxy (direct connection to Azure)
-                http_client = httpx.Client(
-                    timeout=60.0,
-                    transport=httpx.HTTPTransport(retries=3),
-                )
-                print(f"🔧 DEBUG: httpx client created successfully", file=sys.stderr)
+                # Create httpx client with explicit proxy configuration
+                # This avoids the 'proxies' keyword error while still using the proxy
+                if proxy_url:
+                    http_client = httpx.Client(
+                        timeout=120.0,  # Increased timeout for proxy
+                        transport=httpx.HTTPTransport(retries=3),
+                        proxies=proxy_url,  # Explicit proxy string, not dict
+                    )
+                else:
+                    http_client = httpx.Client(
+                        timeout=60.0,
+                        transport=httpx.HTTPTransport(retries=3),
+                    )
+                print(f"🔧 DEBUG: httpx client created successfully with proxy support", file=sys.stderr)
                 
                 client: OpenAI
                 if self.use_litellm_proxy and self.proxy_base_url and self.proxy_api_key:
@@ -136,16 +140,7 @@ class EmbeddingProvider:
                 # Close http client if created
                 if http_client:
                     http_client.close()
-                # Always restore proxy env vars
-                if old_http_proxy:
-                    os.environ["HTTP_PROXY"] = old_http_proxy
-                if old_https_proxy:
-                    os.environ["HTTPS_PROXY"] = old_https_proxy
-                if old_http_proxy_lower:
-                    os.environ["http_proxy"] = old_http_proxy_lower
-                if old_https_proxy_lower:
-                    os.environ["https_proxy"] = old_https_proxy_lower
-                print(f"🔧 DEBUG: Cleaned up and restored proxy env vars", file=sys.stderr)
+                print(f"🔧 DEBUG: Cleaned up http client", file=sys.stderr)
 
         model = self._ensure_sbert()
         return model.encode(list(texts), convert_to_numpy=True)
