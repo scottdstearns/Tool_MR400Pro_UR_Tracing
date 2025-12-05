@@ -4,6 +4,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 import json
 import math
+import os
 from pathlib import Path
 from typing import Iterable, Literal, Sequence
 
@@ -70,21 +71,41 @@ class EmbeddingProvider:
 
     def embed(self, texts: Sequence[str], method: Literal["azure", "sbert"] = "azure") -> np.ndarray:
         if method == "azure" and self.azure_config:
-            client: OpenAI
-            if self.use_litellm_proxy and self.proxy_base_url and self.proxy_api_key:
-                client = OpenAI(base_url=self.proxy_base_url, api_key=self.proxy_api_key)
-            else:
-                client = AzureOpenAI(
-                    api_key=self.azure_config.api_key,
-                    azure_endpoint=self.azure_config.endpoint,
-                    api_version=self.azure_config.api_version,
-                )
+            # Temporarily clear proxy env vars to avoid openai SDK conflicts
+            old_http_proxy = os.environ.pop("HTTP_PROXY", None)
+            old_https_proxy = os.environ.pop("HTTPS_PROXY", None)
+            old_http_proxy_lower = os.environ.pop("http_proxy", None)
+            old_https_proxy_lower = os.environ.pop("https_proxy", None)
+            
+            try:
+                client: OpenAI
+                if self.use_litellm_proxy and self.proxy_base_url and self.proxy_api_key:
+                    client = OpenAI(
+                        base_url=self.proxy_base_url,
+                        api_key=self.proxy_api_key,
+                    )
+                else:
+                    client = AzureOpenAI(
+                        api_key=self.azure_config.api_key,
+                        azure_endpoint=self.azure_config.endpoint,
+                        api_version=self.azure_config.api_version,
+                    )
 
-            resp = client.embeddings.create(
-                model=self.azure_config.deployment_name,
-                input=list(texts),
-            )
-            return np.array([item.embedding for item in resp.data], dtype=np.float32)
+                resp = client.embeddings.create(
+                    model=self.azure_config.deployment_name,
+                    input=list(texts),
+                )
+                return np.array([item.embedding for item in resp.data], dtype=np.float32)
+            finally:
+                # Restore proxy env vars
+                if old_http_proxy:
+                    os.environ["HTTP_PROXY"] = old_http_proxy
+                if old_https_proxy:
+                    os.environ["HTTPS_PROXY"] = old_https_proxy
+                if old_http_proxy_lower:
+                    os.environ["http_proxy"] = old_http_proxy_lower
+                if old_https_proxy_lower:
+                    os.environ["https_proxy"] = old_https_proxy_lower
 
         model = self._ensure_sbert()
         return model.encode(list(texts), convert_to_numpy=True)
