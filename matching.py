@@ -71,20 +71,30 @@ class EmbeddingProvider:
 
     def embed(self, texts: Sequence[str], method: Literal["azure", "sbert"] = "azure") -> np.ndarray:
         if method == "azure" and self.azure_config:
+            import sys
+            print(f"🔧 DEBUG: matching.py version check - proxy fix v2 loaded", file=sys.stderr)
+            
             # Temporarily clear proxy env vars to avoid openai SDK conflicts
             old_http_proxy = os.environ.pop("HTTP_PROXY", None)
             old_https_proxy = os.environ.pop("HTTPS_PROXY", None)
             old_http_proxy_lower = os.environ.pop("http_proxy", None)
             old_https_proxy_lower = os.environ.pop("https_proxy", None)
             
+            print(f"🔧 DEBUG: Cleared proxies - HTTP_PROXY was: {old_http_proxy}", file=sys.stderr)
+            print(f"🔧 DEBUG: Cleared proxies - HTTPS_PROXY was: {old_https_proxy}", file=sys.stderr)
+            print(f"🔧 DEBUG: Current env after clear - HTTP_PROXY: {os.environ.get('HTTP_PROXY', 'NOT SET')}", file=sys.stderr)
+            
             try:
                 client: OpenAI
                 if self.use_litellm_proxy and self.proxy_base_url and self.proxy_api_key:
+                    print(f"🔧 DEBUG: Using LiteLLM proxy path", file=sys.stderr)
                     client = OpenAI(
                         base_url=self.proxy_base_url,
                         api_key=self.proxy_api_key,
                     )
                 else:
+                    print(f"🔧 DEBUG: Using direct Azure OpenAI path", file=sys.stderr)
+                    print(f"🔧 DEBUG: Azure endpoint: {self.azure_config.endpoint}", file=sys.stderr)
                     client = AzureOpenAI(
                         api_key=self.azure_config.api_key,
                         azure_endpoint=self.azure_config.endpoint,
@@ -106,6 +116,7 @@ class EmbeddingProvider:
                     os.environ["http_proxy"] = old_http_proxy_lower
                 if old_https_proxy_lower:
                     os.environ["https_proxy"] = old_https_proxy_lower
+                print(f"🔧 DEBUG: Restored proxy env vars", file=sys.stderr)
 
         model = self._ensure_sbert()
         return model.encode(list(texts), convert_to_numpy=True)

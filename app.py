@@ -18,8 +18,16 @@ from matching import (
 load_dotenv()
 
 st.set_page_config(page_title="MR400 Pro Requirement Tracer", layout="wide", initial_sidebar_state="expanded")
+
+# Show version
+try:
+    with open("VERSION", "r") as f:
+        version = f.read().strip()
+except:
+    version = "unknown"
+
 st.title("🔗 MR400 Pro Legacy → Canonical Requirement Matcher")
-st.caption("Upload a workbook, map sheets/columns, and compute hybrid matches (semantic + lexical + domain rules).")
+st.caption(f"Upload a workbook, map sheets/columns, and compute hybrid matches (semantic + lexical + domain rules). **Version: {version}**")
 
 # ========== FILE UPLOAD ==========
 uploaded_file = st.sidebar.file_uploader("📁 Upload Excel workbook", type=["xlsx"])
