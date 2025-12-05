@@ -11,7 +11,7 @@ from typing import Iterable, Literal, Sequence
 import numpy as np
 import pandas as pd
 from dotenv import load_dotenv
-from openai import AzureOpenAI, OpenAI
+from openai import OpenAI
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 
@@ -82,60 +82,51 @@ class EmbeddingProvider:
         return self._sbert
 
     def embed(self, texts: Sequence[str], method: Literal["azure", "sbert"] = "azure") -> np.ndarray:
-        # Use Azure/LiteLLM path if either azure_config exists OR using litellm proxy
+        """Embed texts using OpenAI-compatible endpoint (LiteLLM or direct Azure)."""
         if method == "azure" and (self.azure_config or self.use_litellm_proxy):
-            import sys
-            print(f"🔧 DEBUG: matching.py version v6 - no custom http client", file=sys.stderr)
+            safe_texts = ["" if t is None else str(t) for t in texts]
+            if len(safe_texts) == 0:
+                return np.empty((0, 0), dtype=np.float32)
             
-            # Don't create custom http client - let OpenAI SDK handle it
-            # Just ensure proxy env vars are properly formatted
-            proxy_url = os.environ.get("HTTP_PROXY") or os.environ.get("http_proxy")
-            print(f"🔧 DEBUG: Proxy in env: {proxy_url if proxy_url else 'None'}", file=sys.stderr)
-            
-            try:
-                client: OpenAI
-                model_to_use = None
-                
-                if self.use_litellm_proxy and self.proxy_base_url and self.proxy_api_key:
-                    print(f"🔧 DEBUG: Using LiteLLM proxy path", file=sys.stderr)
-                    print(f"🔧 DEBUG: LiteLLM URL: {self.proxy_base_url}", file=sys.stderr)
-                    # LiteLLM is internal Docker network - no proxy needed
-                    client = OpenAI(
-                        base_url=self.proxy_base_url,
-                        api_key=self.proxy_api_key,
-                        timeout=120.0,
-                    )
-                    # LiteLLM mode: use EMBEDDING_MODEL from env (e.g., "azure-embedding-large")
-                    model_to_use = os.getenv("EMBEDDING_MODEL", "azure-embedding-large")
-                    print(f"🔧 DEBUG: Using LiteLLM model: {model_to_use}", file=sys.stderr)
-                elif self.azure_config:
-                    print(f"🔧 DEBUG: Using direct Azure OpenAI", file=sys.stderr)
-                    print(f"🔧 DEBUG: Azure endpoint: {self.azure_config.endpoint}", file=sys.stderr)
-                    client = AzureOpenAI(
-                        api_key=self.azure_config.api_key,
-                        azure_endpoint=self.azure_config.endpoint,
-                        api_version=self.azure_config.api_version,
-                        timeout=120.0,
-                    )
-                    model_to_use = self.azure_config.deployment_name
-                    print(f"🔧 DEBUG: Using Azure deployment: {model_to_use}", file=sys.stderr)
-                else:
-                    raise RuntimeError(
-                        "Neither LiteLLM proxy nor Azure OpenAI config provided. "
-                        "Set OPENAI_BASE_URL for LiteLLM or AZURE_OPENAI_* for direct Azure."
-                    )
-
-                print(f"🔧 DEBUG: Client created, calling embeddings API...", file=sys.stderr)
-                resp = client.embeddings.create(
-                    model=model_to_use,
-                    input=list(texts),
+            # Simple OpenAI client - exactly like the working Tool_RequirementsTracing app
+            if self.use_litellm_proxy and self.proxy_base_url and self.proxy_api_key:
+                client = OpenAI(
+                    base_url=self.proxy_base_url,
+                    api_key=self.proxy_api_key,
+                    timeout=120.0,
                 )
-                print(f"🔧 DEBUG: Got {len(resp.data)} embeddings successfully", file=sys.stderr)
-                return np.array([item.embedding for item in resp.data], dtype=np.float32)
-            except Exception as e:
-                print(f"🔧 DEBUG: Error during embedding: {e}", file=sys.stderr)
-                raise
+                model = os.getenv("EMBEDDING_MODEL", "azure-embedding-large")
+            elif self.azure_config:
+                # Direct Azure mode: use OpenAI client with Azure endpoint format
+                # Format: base_url = https://endpoint/openai/deployments/deployment-name
+                azure_base = f"{self.azure_config.endpoint.rstrip('/')}/openai/deployments/{self.azure_config.deployment_name}"
+                client = OpenAI(
+                    base_url=azure_base,
+                    api_key=self.azure_config.api_key,
+                    timeout=120.0,
+                    default_headers={"api-version": self.azure_config.api_version},
+                )
+                model = self.azure_config.model_name
+            else:
+                raise RuntimeError(
+                    "No embedding provider configured. Set OPENAI_BASE_URL or AZURE_OPENAI_* env vars."
+                )
+            
+            # Batch embed (matching working app pattern)
+            batch_size = 256
+            embeddings_list = []
+            try:
+                for start in range(0, len(safe_texts), batch_size):
+                    batch = safe_texts[start : start + batch_size]
+                    resp = client.embeddings.create(model=model, input=batch)
+                    for item in resp.data:
+                        embeddings_list.append(item.embedding)
+            except Exception as exc:
+                raise RuntimeError(f"Embedding failed: {exc}") from exc
+            
+            return np.asarray(embeddings_list, dtype=np.float32)
 
+        # Fallback to SBERT
         model = self._ensure_sbert()
         return model.encode(list(texts), convert_to_numpy=True)
 
