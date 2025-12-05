@@ -10,6 +10,9 @@ This guide covers deploying the **Tool_MR400Pro_UR_Tracing** on the MRPC AI Plat
 - Docker & Docker Compose installed on target EC2 instance
 - Access to Azure OpenAI embeddings endpoint (`text-embedding-3-large`)
 - Corporate proxy settings (if applicable)
+- **Disk space:** ~500MB for lightweight build (Azure OpenAI only)
+
+**Note:** The lightweight version (v0.2.0+) removes heavy ML dependencies (PyTorch, SBERT) to reduce Docker image size from ~3GB to ~500MB. SBERT fallback can be added if needed.
 
 ---
 

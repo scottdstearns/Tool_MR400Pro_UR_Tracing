@@ -14,7 +14,14 @@ from dotenv import load_dotenv
 from openai import AzureOpenAI, OpenAI
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
-from sentence_transformers import SentenceTransformer
+
+# Make sentence-transformers optional (only needed for SBERT fallback)
+try:
+    from sentence_transformers import SentenceTransformer
+    SBERT_AVAILABLE = True
+except ImportError:
+    SBERT_AVAILABLE = False
+    SentenceTransformer = None
 
 load_dotenv()
 
@@ -64,7 +71,12 @@ class EmbeddingProvider:
         self.proxy_api_key = proxy_api_key
         self._sbert: SentenceTransformer | None = None
 
-    def _ensure_sbert(self) -> SentenceTransformer:
+    def _ensure_sbert(self):
+        if not SBERT_AVAILABLE:
+            raise RuntimeError(
+                "SBERT fallback requested but sentence-transformers is not installed. "
+                "Please use Azure OpenAI embeddings or install sentence-transformers."
+            )
         if self._sbert is None:
             self._sbert = SentenceTransformer(self.fallback_model_name)
         return self._sbert

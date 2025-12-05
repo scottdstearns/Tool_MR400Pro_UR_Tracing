@@ -12,10 +12,11 @@ Tailored to the specs in `Prompt_UR_Tracing_Tool.md` and aligned with the **MRPC
 ## Features
 
 ✅ **Hybrid Matching Algorithm**
-- Azure OpenAI embeddings for semantic similarity
+- **Azure OpenAI embeddings** for semantic similarity (primary)
 - TF-IDF with tri-grams for lexical matching
 - Domain-specific keyword rules for boost scoring
 - Configurable fusion logic (max of rule/embedding/TF-IDF scores)
+- Optional SBERT fallback (requires additional dependencies)
 
 ✅ **Interactive Streamlit UI**
 - Upload Excel workbooks with multiple sheets
@@ -56,6 +57,14 @@ streamlit run app.py
 ```
 
 Open http://localhost:8501
+
+### Optional: SBERT Fallback
+
+The default installation is **lightweight** and uses only Azure OpenAI. To enable SBERT fallback:
+
+```bash
+pip install sentence-transformers torch --index-url https://download.pytorch.org/whl/cpu
+```
 
 ---
 
