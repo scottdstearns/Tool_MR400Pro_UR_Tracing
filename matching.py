@@ -12,7 +12,6 @@ import numpy as np
 import pandas as pd
 from dotenv import load_dotenv
 from openai import AzureOpenAI, OpenAI
-import httpx
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 
@@ -86,39 +85,25 @@ class EmbeddingProvider:
         # Use Azure/LiteLLM path if either azure_config exists OR using litellm proxy
         if method == "azure" and (self.azure_config or self.use_litellm_proxy):
             import sys
-            print(f"🔧 DEBUG: matching.py version v5 - explicit proxy config", file=sys.stderr)
+            print(f"🔧 DEBUG: matching.py version v6 - no custom http client", file=sys.stderr)
             
-            # Save proxy settings to configure explicitly
+            # Don't create custom http client - let OpenAI SDK handle it
+            # Just ensure proxy env vars are properly formatted
             proxy_url = os.environ.get("HTTP_PROXY") or os.environ.get("http_proxy")
-            print(f"🔧 DEBUG: Using proxy: {proxy_url if proxy_url else 'None (direct connection)'}", file=sys.stderr)
+            print(f"🔧 DEBUG: Proxy in env: {proxy_url if proxy_url else 'None'}", file=sys.stderr)
             
-            http_client = None
             try:
-                # Create httpx client with explicit proxy configuration
-                # This avoids the 'proxies' keyword error while still using the proxy
-                if proxy_url:
-                    http_client = httpx.Client(
-                        timeout=120.0,  # Increased timeout for proxy
-                        transport=httpx.HTTPTransport(retries=3),
-                        proxies=proxy_url,  # Explicit proxy string, not dict
-                    )
-                else:
-                    http_client = httpx.Client(
-                        timeout=60.0,
-                        transport=httpx.HTTPTransport(retries=3),
-                    )
-                print(f"🔧 DEBUG: httpx client created successfully with proxy support", file=sys.stderr)
-                
                 client: OpenAI
                 model_to_use = None
                 
                 if self.use_litellm_proxy and self.proxy_base_url and self.proxy_api_key:
                     print(f"🔧 DEBUG: Using LiteLLM proxy path", file=sys.stderr)
                     print(f"🔧 DEBUG: LiteLLM URL: {self.proxy_base_url}", file=sys.stderr)
+                    # LiteLLM is internal Docker network - no proxy needed
                     client = OpenAI(
                         base_url=self.proxy_base_url,
                         api_key=self.proxy_api_key,
-                        http_client=http_client,
+                        timeout=120.0,
                     )
                     # LiteLLM mode: use EMBEDDING_MODEL from env (e.g., "azure-embedding-large")
                     model_to_use = os.getenv("EMBEDDING_MODEL", "azure-embedding-large")
@@ -130,7 +115,7 @@ class EmbeddingProvider:
                         api_key=self.azure_config.api_key,
                         azure_endpoint=self.azure_config.endpoint,
                         api_version=self.azure_config.api_version,
-                        http_client=http_client,
+                        timeout=120.0,
                     )
                     model_to_use = self.azure_config.deployment_name
                     print(f"🔧 DEBUG: Using Azure deployment: {model_to_use}", file=sys.stderr)
@@ -150,11 +135,6 @@ class EmbeddingProvider:
             except Exception as e:
                 print(f"🔧 DEBUG: Error during embedding: {e}", file=sys.stderr)
                 raise
-            finally:
-                # Close http client if created
-                if http_client:
-                    http_client.close()
-                print(f"🔧 DEBUG: Cleaned up http client", file=sys.stderr)
 
         model = self._ensure_sbert()
         return model.encode(list(texts), convert_to_numpy=True)
